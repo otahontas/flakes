@@ -7,6 +7,7 @@ on:
 
 jobs:
   update:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -41,7 +42,7 @@ jobs:
             echo "updated=false" >> "$GITHUB_OUTPUT"
           else
             echo "updated=true" >> "$GITHUB_OUTPUT"
-            python3 -c "import json; print(json.load(open('packages/${{ matrix.package }}/hashes.json'))['version'])" > version.txt
+            jq -r .version packages/${{ matrix.package }}/hashes.json > version.txt
           fi
 
       - name: Create PR
