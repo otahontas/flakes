@@ -62,6 +62,8 @@ jobs:
           git commit -m "$TITLE"
           git push --force origin "HEAD:$BRANCH"
 
+          gh label create automated --color 0e8a16 --force 2>/dev/null || true
+
           if PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number // empty' | grep .); then
             gh pr edit "$PR" --title "$TITLE" --body "Automated update of ${{ matrix.package }} to $VERSION."
           else
