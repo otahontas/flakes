@@ -16,3 +16,4 @@ jobs:
         with:
           use-auto-merge: true
           merge-method: merge
+          required-labels: automated
