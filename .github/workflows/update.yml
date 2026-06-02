@@ -38,12 +38,16 @@ jobs:
       - name: Check for changes
         id: changed
         run: |
-          if git diff --quiet packages/${{ matrix.package }}/hashes.json; then
+          if git diff --quiet -- packages/${{ matrix.package }}/ && git diff --cached --quiet -- packages/${{ matrix.package }}/; then
             echo "updated=false" >> "$GITHUB_OUTPUT"
           else
             echo "updated=true" >> "$GITHUB_OUTPUT"
             jq -r .version packages/${{ matrix.package }}/hashes.json > version.txt
           fi
+
+      - name: Build changed package
+        if: steps.changed.outputs.updated == 'true'
+        run: nix build .#${{ matrix.package }} --no-link
 
       - name: Create PR
         if: steps.changed.outputs.updated == 'true'

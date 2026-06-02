@@ -1,7 +1,7 @@
 {
   lib,
   buildNpmPackage,
-  fetchurl,
+  fetchFromGitHub,
   nodejs,
 }:
 
@@ -12,16 +12,36 @@ buildNpmPackage {
   pname = "pi-mcp-adapter";
   version = data.version;
 
-  src = fetchurl {
-    url = "https://registry.npmjs.org/pi-mcp-adapter/-/pi-mcp-adapter-${data.version}.tgz";
+  src = fetchFromGitHub {
+    owner = "nicobailon";
+    repo = "pi-mcp-adapter";
+    rev = "v${data.version}";
     hash = data.sourceHash;
   };
 
   inherit nodejs;
-  npmDepsHash = "";
+  npmDepsHash = data.npmDepsHash;
   npmFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
-  doInstallCheck = false;
+
+  postPatch = lib.optionalString (builtins.pathExists ./package-lock.json) ''
+    cp ${./package-lock.json} package-lock.json
+  '';
+
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p "$out"
+    cp -r . "$out/"
+
+    runHook postInstall
+  '';
+
+  doInstallCheck = true;
+  installCheckPhase = ''
+    test -f "$out/package.json"
+    test -f "$out/index.ts"
+  '';
 
   meta = with lib; {
     description = "MCP adapter for pi — discover, connect and manage MCP servers";

@@ -1,0 +1,26 @@
+name: Build
+
+on:
+  pull_request:
+    paths:
+      - flake.nix
+      - flake.lock
+      - packages/**
+      - .github/workflows/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - pi-mcp-adapter
+          - pi-subagents
+          - pi-web-access
+          - pi-ralph-loop
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
+      - name: Build package
+        run: nix build .#${{ matrix.package }} --no-link

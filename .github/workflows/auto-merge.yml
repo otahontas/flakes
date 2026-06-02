@@ -1,19 +1,49 @@
-name: Auto Merge Dependency Updates
+name: Auto merge dependency updates
+
 on:
-  - pull_request_target
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+
 jobs:
   auto-merge-dependency-updates:
-    if: contains(github.event.pull_request.labels.*.name, 'automated')
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     concurrency:
-      group: 'auto-merge:${{ github.head_ref }}'
+      group: 'auto-merge:${{ github.event.workflow_run.head_branch }}'
       cancel-in-progress: true
     steps:
-      - uses: Mic92/auto-merge@main
-        with:
-          use-auto-merge: true
-          merge-method: merge
-          required-labels: automated
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          PR=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$REPO/commits/$HEAD_SHA/pulls" \
+            --jq '.[0].number // empty')
+
+          if [ -z "$PR" ]; then
+            echo "No pull request found for $HEAD_SHA"
+            exit 0
+          fi
+
+          PR_HEAD=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq .headRefOid)
+          if [ "$PR_HEAD" != "$HEAD_SHA" ]; then
+            echo "Pull request head moved; skip auto-merge"
+            exit 0
+          fi
+
+          HAS_LABEL=$(gh pr view "$PR" --repo "$REPO" --json labels --jq 'any(.labels[].name; . == "automated")')
+          if [ "$HAS_LABEL" != "true" ]; then
+            echo "Pull request lacks automated label; skip auto-merge"
+            exit 0
+          fi
+
+          gh pr merge "$PR" --repo "$REPO" --auto --merge

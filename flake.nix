@@ -26,7 +26,13 @@
         let pkgs = nixpkgs.legacyPackages.${system};
         in {
           default = pkgs.mkShell {
-            packages = with pkgs; [ nodejs jq ];
+            packages = with pkgs; [
+              git
+              jq
+              nodejs
+              prefetch-npm-deps
+              trash-cli
+            ];
           };
         });
     };

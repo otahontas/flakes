@@ -1,7 +1,7 @@
 {
   lib,
   buildNpmPackage,
-  fetchurl,
+  fetchFromGitHub,
   nodejs,
 }:
 
@@ -12,16 +12,38 @@ buildNpmPackage {
   pname = "pi-subagents";
   version = data.version;
 
-  src = fetchurl {
-    url = "https://registry.npmjs.org/pi-subagents/-/pi-subagents-${data.version}.tgz";
+  src = fetchFromGitHub {
+    owner = "nicobailon";
+    repo = "pi-subagents";
+    rev = "v${data.version}";
     hash = data.sourceHash;
   };
 
   inherit nodejs;
-  npmDepsHash = "";
+  npmDepsHash = data.npmDepsHash;
   npmFlags = [ "--ignore-scripts" ];
   dontNpmBuild = true;
-  doInstallCheck = false;
+
+  postPatch = lib.optionalString (builtins.pathExists ./package-lock.json) ''
+    cp ${./package-lock.json} package-lock.json
+  '';
+
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p "$out"
+    cp -r . "$out/"
+
+    runHook postInstall
+  '';
+
+  doInstallCheck = true;
+  installCheckPhase = ''
+    test -f "$out/package.json"
+    test -f "$out/src/extension/index.ts"
+    test -d "$out/skills"
+    test -d "$out/prompts"
+  '';
 
   meta = with lib; {
     description = "Subagent orchestration for pi — delegate tasks to specialized coding agents";
